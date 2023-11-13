@@ -1,26 +1,28 @@
 use std::ops::{Add, Sub};
 
-use super::UnitT;
+use super::{
+    factors::{CELCIUS, KELVIN},
+    UnitT,
+};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Temperature(UnitT);
 
 impl Temperature {
-    pub fn from_kelvin(value: UnitT) -> Self
-    {
-        Self(value)
+    pub fn from_kelvin(value: UnitT) -> Self {
+        Self(value + KELVIN)
     }
 
     pub fn from_celcius(value: UnitT) -> Self {
-        Self(value + 273)
+        Self(value + CELCIUS)
     }
 
     pub fn as_kelvin(&self) -> UnitT {
-        self.0
+        self.0 - KELVIN
     }
 
     pub fn as_celcius(&self) -> UnitT {
-        self.0 + 273
+        self.0 - CELCIUS
     }
 }
 

@@ -1,90 +1,92 @@
-use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign};
+use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 
-use super::{Area, Distance, UnitT};
+use super::{
+    Area, Distance, UnitT, CENTILITRE, CENTIMETRE3, DECILITRE, DECIMETRE3, KILOMETRE3, LITRE,
+    METRE3, MICROLITRE, MILLILITRE, MILLIMETRE3,
+};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Volume(UnitT);
 
 impl Volume {
     pub const fn from_cubic_kilometres(value: UnitT) -> Self {
-        Self(value * 1_000_000_000_000_000_000)
+        Self(value * KILOMETRE3)
     }
 
     pub const fn from_cubic_metres(value: UnitT) -> Self {
-        Self(value * 1_000_000_000)
+        Self(value * METRE3)
     }
 
     pub const fn from_cubic_decimetres(value: UnitT) -> Self {
-        Self(value * 1_000_000)
+        Self(value * DECIMETRE3)
     }
 
     pub const fn from_cubic_centimetres(value: UnitT) -> Self {
-        Self(value * 1_000)
+        Self(value * CENTIMETRE3)
     }
 
     pub const fn from_cubic_millimetres(value: UnitT) -> Self {
-        Self(value)
+        Self(value * MILLIMETRE3)
     }
 
     pub const fn from_litres(value: UnitT) -> Self {
-        Self(value * 1_000_000)
+        Self(value * LITRE)
     }
 
     pub const fn from_decilitres(value: UnitT) -> Self {
-        Self(value * 100_000)
+        Self(value * DECILITRE)
     }
 
     pub const fn from_centilitres(value: UnitT) -> Self {
-        Self(value * 10_000)
+        Self(value * CENTILITRE)
     }
 
     pub const fn from_millilitres(value: UnitT) -> Self {
-        Self(value * 1_000)
+        Self(value * MILLILITRE)
     }
 
     pub const fn from_microlitres(value: UnitT) -> Self {
-        Self(value)
+        Self(value * MICROLITRE)
     }
 
-
     pub const fn as_cubic_kilometres(&self) -> UnitT {
-        self.0 / 1_000_000_000_000_000_000
+        self.0 / KILOMETRE3
     }
 
     pub const fn as_cubic_metres(&self) -> UnitT {
-        self.0 / 1_000_000_000
+        self.0 / METRE3
     }
 
     pub const fn as_cubic_decimetres(&self) -> UnitT {
-        self.0 / 1_000_000
+        self.0 / DECIMETRE3
     }
 
     pub const fn as_cubic_centimetres(&self) -> UnitT {
-        self.0 / 1_000
+        self.0 / CENTIMETRE3
     }
 
     pub const fn as_cubic_millimetres(&self) -> UnitT {
-        self.0
+        self.0 / MILLIMETRE3
     }
 
     pub const fn as_litres(&self) -> UnitT {
-        self.0 / 1_000_000
+        self.0 / LITRE
     }
 
     pub const fn as_decilitres(&self) -> UnitT {
-        self.0 / 100_000
+        self.0 / DECILITRE
     }
 
     pub const fn as_centilitres(&self) -> UnitT {
-        self.0 / 10_000
+        self.0 / CENTILITRE
     }
 
     pub const fn as_millilitres(&self) -> UnitT {
-        self.0 / 1_000
+        self.0 / MILLILITRE
     }
 
     pub const fn as_microlitres(&self) -> UnitT {
-        self.0
+        self.0 / MICROLITRE
     }
 }
 

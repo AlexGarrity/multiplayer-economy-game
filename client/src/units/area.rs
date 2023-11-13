@@ -1,49 +1,49 @@
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Div, Mul, Sub};
 
-use super::{Distance, Volume, UnitT};
+use super::{Distance, UnitT, Volume, CENTIMETRE2, DECIMETRE2, KILOMETRE2, METRE2, MILLIMETRE2};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Area(UnitT);
 
 impl Area {
     pub const fn from_square_kilometres(value: UnitT) -> Self {
-        Self(value * 1_000_000_000_000)
+        Self(value * KILOMETRE2)
     }
 
     pub const fn from_square_metres(value: UnitT) -> Self {
-        Self(value * 1_000_000)
+        Self(value * METRE2)
     }
 
     pub const fn from_square_decimetres(value: UnitT) -> Self {
-        Self(value * 10_000)
+        Self(value * DECIMETRE2)
     }
 
     pub const fn from_square_centimetres(value: UnitT) -> Self {
-        Self(value * 100)
+        Self(value * CENTIMETRE2)
     }
 
     pub const fn from_square_millimetres(value: UnitT) -> Self {
-        Self(value)
+        Self(value * MILLIMETRE2)
     }
 
     pub const fn as_square_kilometres(&self) -> UnitT {
-        self.0 / 1_000_000_000_000
+        self.0 / KILOMETRE2
     }
 
     pub const fn as_square_metres(&self) -> UnitT {
-        self.0 / 1_000_000
+        self.0 / METRE2
     }
 
     pub const fn as_square_decimetres(&self) -> UnitT {
-        self.0 / 10_000
+        self.0 / DECIMETRE2
     }
 
     pub const fn as_square_centimetres(&self) -> UnitT {
-        self.0 / 100
+        self.0 / CENTIMETRE2
     }
 
     pub const fn as_square_millimetres(&self) -> UnitT {
-        self.0
+        self.0 / MILLIMETRE2
     }
 }
 

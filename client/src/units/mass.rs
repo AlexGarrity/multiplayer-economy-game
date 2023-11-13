@@ -1,48 +1,48 @@
-use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign};
+use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 
-use super::UnitT;
+use super::{UnitT, GRAM, KILOGRAM, KILOTONNE, MILLIGRAM, TONNE};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Mass(UnitT);
 impl Mass {
     pub const fn from_kilotonnes(value: UnitT) -> Self {
-        Self(value * 1_000_000_000_000)
+        Self(value * KILOTONNE)
     }
 
     pub const fn from_tonnes(value: UnitT) -> Self {
-        Self(value * 1_000_000_000)
+        Self(value * TONNE)
     }
 
     pub const fn from_kilograms(value: UnitT) -> Self {
-        Self(value * 1_000_000)
+        Self(value * KILOGRAM)
     }
 
     pub const fn from_grams(value: UnitT) -> Self {
-        Self(value * 1_000)
+        Self(value * GRAM)
     }
 
     pub const fn from_milligrams(value: UnitT) -> Self {
-        Self(value)
+        Self(value * MILLIGRAM)
     }
 
     pub const fn as_kilotonnes(&self) -> UnitT {
-        self.0 / 1_000_000_000_000
+        self.0 / KILOTONNE
     }
 
     pub const fn as_tonnes(&self) -> UnitT {
-        self.0 / 1_000_000_000
+        self.0 / TONNE
     }
 
     pub const fn as_kilograms(&self) -> UnitT {
-        self.0 / 1_000_000
+        self.0 / KILOGRAM
     }
 
     pub const fn as_grams(&self) -> UnitT {
-        self.0 / 1_000
+        self.0 / GRAM
     }
 
     pub const fn as_milligrams(&self) -> UnitT {
-        self.0
+        self.0 / MILLIGRAM
     }
 }
 

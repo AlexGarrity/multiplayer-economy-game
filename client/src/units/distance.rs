@@ -1,4 +1,4 @@
-use super::{Area, UnitT, Volume};
+use super::{Area, UnitT, Volume, CENTIMETRE, DECIMETRE, KILOMETRE, METRE, MILLIMETRE};
 use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -6,43 +6,43 @@ pub struct Distance(UnitT);
 
 impl Distance {
     pub fn from_kilometres(value: UnitT) -> Self {
-        Self(value * 1_000_000)
+        Self(value * KILOMETRE)
     }
 
     pub fn from_metres(value: UnitT) -> Self {
-        Self(value * 1_000)
+        Self(value * METRE)
     }
 
     pub fn from_decimetres(value: UnitT) -> Self {
-        Self(value * 100)
+        Self(value * DECIMETRE)
     }
 
     pub fn from_centimetres(value: UnitT) -> Self {
-        Self(value * 10)
+        Self(value * CENTIMETRE)
     }
 
     pub fn from_millimetres(value: UnitT) -> Self {
-        Self(value)
+        Self(value * MILLIMETRE)
     }
 
     pub fn as_kilometres(&self) -> UnitT {
-        self.0 / 1_000_000
+        self.0 / KILOMETRE
     }
 
     pub fn as_metres(&self) -> UnitT {
-        self.0 / 1_000
+        self.0 / METRE
     }
 
     pub fn as_decimetres(&self) -> UnitT {
-        self.0 / 100
+        self.0 / DECIMETRE
     }
 
     pub fn as_centimetres(&self) -> UnitT {
-        self.0 / 10
+        self.0 / CENTIMETRE
     }
 
     pub fn as_millimetres(&self) -> UnitT {
-        self.0
+        self.0 / MILLIMETRE
     }
 }
 
@@ -74,9 +74,7 @@ impl Mul<Area> for Distance {
     type Output = Volume;
 
     fn mul(self, rhs: Area) -> Self::Output {
-        Volume::from_cubic_millimetres(
-            self.as_millimetres() * rhs.as_square_millimetres()
-        )
+        Volume::from_cubic_millimetres(self.as_millimetres() * rhs.as_square_millimetres())
     }
 }
 

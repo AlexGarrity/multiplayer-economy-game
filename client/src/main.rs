@@ -461,19 +461,29 @@ fn use_tools(
     }
 }
 
-fn controls(keys: Res<Input<KeyCode>>, ai: Query<(&ResourceInventory, &Brain, &ItemTracker)>) {
+fn controls(
+    keys: Res<Input<KeyCode>>,
+    global_tracker: Res<ItemTracker>,
+    ai: Query<(&ResourceInventory, &Brain, &ItemTracker)>,
+) {
     if keys.just_released(KeyCode::P) {
+        info!("Global Tracker:");
+        for (item_id, volume) in &global_tracker.0 {
+            info!("\tID: {}\tVolume: {}L", item_id, volume.as_litres());
+        }
+        info!("\n");
         for (inv, brain, tracker) in &ai {
             info!("AI {} Inventory:", brain.id);
             for (item_id, volume) in &inv.items {
-                info!("\tID: {}\tVolume: {}ml", item_id, volume.as_millilitres());
+                info!("\tID: {}\tVolume: {}L", item_id, volume.as_litres());
             }
             info!("AI {} Tracker:", brain.id);
             for (item_id, quantity) in &tracker.0 {
-                info!("\tID: {}\tVolume: {}ml", item_id, quantity.as_millilitres());
+                info!("\tID: {}\tVolume: {}L", item_id, quantity.as_litres());
             }
             info!("\n");
         }
+        info!("\n");
     }
 }
 
