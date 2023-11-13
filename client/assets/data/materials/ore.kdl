@@ -1,0 +1,24 @@
+material "Hematite" {
+    composition {
+        material name="Iron" mean=0.625 sd=0.075
+    }
+}
+
+material "Magnetite" {
+    composition {
+        material name="Iron" mean=0.66 sd=0.06
+    }
+}
+
+material "Ilmenite" {
+    composition {
+        material name="Iron" mean=0.37 sd=0.05
+        material name="Titanium" mean=0.32 sd=0.05
+    }
+}
+
+material "Rutile" {
+    composition {
+        material name="Titanium" mean=0.6, sd=0.03
+    }
+}

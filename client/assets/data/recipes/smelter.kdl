@@ -1,0 +1,29 @@
+recipe "Hematite Smelting" {
+    type "smelter"
+    input name="Hematite" amount=1.0
+    output name="Iron" mean=0.625 sd=0.075
+}
+
+recipe "Magnetite Smelting" {
+    type "smelter"
+    input name="Magnetite" amount=1.0
+    output {
+        material name="Iron" mean=0.66 sd=0.06
+    }
+}
+
+recipe "Ilmenite Smelting" {
+    type "smelter"
+    input name="Ilmenite" amount=1.0
+    output {
+        material name="Titanium" mean=0.46 sd=
+    }
+}
+
+recipe "Rutile Smelting" {
+    type "smelter"
+    input name="Rutile" amount=1.0
+    output {
+
+    }
+}
