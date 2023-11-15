@@ -1,4 +1,7 @@
-use std::ops::{Add, Sub};
+use std::{
+    fmt::Display,
+    ops::{Add, Sub},
+};
 
 use super::{
     factors::{CELCIUS, KELVIN},
@@ -39,5 +42,11 @@ impl Sub for Temperature {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Temperature(self.0 - rhs.0)
+    }
+}
+
+impl Display for Temperature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}K", self.as_kelvin()))
     }
 }

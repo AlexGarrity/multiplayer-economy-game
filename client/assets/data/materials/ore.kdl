@@ -1,24 +1,32 @@
-material "Hematite" {
+define_compound_material {
+    name "Hematite"
     composition {
-        material name="Iron" mean=0.625 sd=0.075
+        basic_material name="Iron" mean=0.699 sd=0.05
+        basic_material name="Oxygen" mean=0.301 sd=0.05
     }
 }
 
-material "Magnetite" {
+define_compound_material {
+    name "Magnetite"
     composition {
-        material name="Iron" mean=0.66 sd=0.06
+        basic_material name="Iron" mean=0.724 sd=0.05
+        basic_material name="Oxygen" mean=0.276 sd=0.05
     }
 }
 
-material "Ilmenite" {
+define_compound_material {
+    name "Ilmenite"
     composition {
-        material name="Iron" mean=0.37 sd=0.05
-        material name="Titanium" mean=0.32 sd=0.05
+        basic_material name="Iron" mean=0.466 sd=0.05
+        basic_material name="Titanium" mean=0.4 sd=0.05
+        basic_material name="Oxygen" mean=0.134 sd=0.05
     }
 }
 
-material "Rutile" {
+define_compound_material {
+    name "Rutile"
     composition {
-        material name="Titanium" mean=0.6, sd=0.03
+        basic_material name="Titanium" mean=0.401 sd=0.05
+        basic_material name="Oxygen" mean=0.599 sd=0.05
     }
 }

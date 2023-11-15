@@ -1,0 +1,81 @@
+document {
+  info {
+    title "Materials definition file"
+    description "Defines a list of materials and their properties"
+    modified "2023-11-15"
+    version "0.1.0"
+  }
+  node "define_basic_material" description="A node that defines a basic (fundamental) material" {
+    children {
+      node "name" description="The name of the material" {
+        min 1
+        max 1
+        type "string"
+      }
+      node "density" description="The density of the material (in kg/m^3 or g/L)" {
+        min 1
+        max 1
+        type "number"
+      }
+      node "thermal_properties" description="The thermal properties of the material" {
+        min 1
+        max 1
+        children {
+          node "heat_capacity" description="The specific heat capacity of the material (in J/kgK)" {
+            min 1
+            max 1
+            type "number"
+          }
+          node "melting_point" description="The melting point of the material (in K)" {
+            min 1
+            max 1
+            type "number"
+          }
+          node "boiling_point" description="The boiling point of the material (in K)" {
+            min 1
+            max 1
+            type "number"
+          }
+        }
+      }
+    }
+  }
+  node "define_compound_material" description="A node that defines a compound material (made of other materials)" {
+    children {
+      node "name" description="The name of the material" {
+        min 1
+        max 1
+        type "string"
+      }
+      node "composition" description="The materials composing the compound material" {
+        min 1
+        max 1
+        children {
+          node-names {
+            type "string"
+            enum "basic_material" "compound_material"
+          }
+          // This applies to all child nodes of the composition node
+          node description="Add a material to the compound material's composition" {
+            min 1
+            prop description="The name of the material to add" {
+              key "name"
+              type "string"
+              required true
+            }
+            prop description="The mean amount of this material found in the compound material (range 0.0-1.0)" {
+              key "mean"
+              type "number"
+              required true
+            }
+            prop description="The standard deviation of the amount of this material found in the compound material (range 0.0-1.0)" {
+              key "sd"
+              type "number"
+              required true
+            }
+          }
+        }
+      }
+    }
+  }
+}

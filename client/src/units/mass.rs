@@ -2,7 +2,7 @@ use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 
 use super::{UnitT, GRAM, KILOGRAM, KILOTONNE, MILLIGRAM, TONNE};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Default)]
 pub struct Mass(UnitT);
 impl Mass {
     pub const fn from_kilotonnes(value: UnitT) -> Self {

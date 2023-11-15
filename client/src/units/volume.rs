@@ -5,7 +5,7 @@ use super::{
     METRE3, MICROLITRE, MILLILITRE, MILLIMETRE3,
 };
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Default)]
 pub struct Volume(UnitT);
 
 impl Volume {
@@ -147,5 +147,13 @@ impl Div<UnitT> for Volume {
 
     fn div(self, rhs: UnitT) -> Self::Output {
         Volume(self.0 / rhs)
+    }
+}
+
+impl Div for Volume {
+    type Output = f32;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        self.0 as f32 / rhs.0 as f32
     }
 }
