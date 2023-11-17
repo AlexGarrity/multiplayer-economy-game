@@ -1,5 +1,6 @@
 use pkg_version::{pkg_version_major, pkg_version_minor, pkg_version_patch};
 
+pub mod input;
 pub mod loaders;
 pub mod materials;
 pub mod network;
