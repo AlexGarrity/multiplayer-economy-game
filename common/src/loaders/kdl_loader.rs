@@ -4,6 +4,7 @@ use bevy::{
     reflect::TypePath,
     utils::thiserror::Error,
 };
+
 use kdl::{KdlDocument, KdlError};
 
 #[derive(Asset, TypePath, Debug, Resource)]

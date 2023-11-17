@@ -4,8 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { version = "0.12.0", features = ["dynamic_linking"] }
 bevy_asset_loader = "0.18.0"
-rand = "0.8.5"
-rand_distr = "0.4.3"
+bevy_renet = "0.0.10"
 kdl = "4.6.0"
+
+
+[dependencies.common]
+version = "*"
+path = "../common"
+
+[dependencies.bevy]
+version = "0.12.0"
+features = ["dynamic_linking"]
+
+[dependencies.bevy-inspector-egui]
+version = "0.21.0"
+default-features = false

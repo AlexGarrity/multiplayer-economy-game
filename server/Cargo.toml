@@ -1,3 +1,15 @@
 [package]
 name = "server"
 version = "0.1.0"
+
+[dependencies]
+bevy_asset_loader = "0.18.0"
+bevy_renet = "0.0.10"
+
+[dependencies.bevy]
+version = "0.12.0"
+features = ["dynamic_linking"]
+
+[dependencies.common]
+version = "*"
+path = "../common"

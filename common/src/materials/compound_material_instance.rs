@@ -1,6 +1,4 @@
-use bevy::log::info;
-
-use crate::units::{Density, Mass, UnitT, Volume};
+use crate::units::{Density, Mass, UnitT};
 
 use super::{MaterialID, MaterialManager, MaterialProperties};
 
