@@ -3,13 +3,12 @@ extern crate bevy_asset_loader;
 extern crate bevy_renet;
 extern crate common;
 
-mod client_entity_mapper;
-mod network_plugin;
+mod network;
 
 use bevy::{log::LogPlugin, prelude::*};
 use bevy_asset_loader::loading_state::{LoadingState, LoadingStateAppExt};
-use common::input::PlayerInput;
-use network_plugin::NetworkPlugin;
+use common::network::events::PlayerInput;
+use network::NetworkPlugin;
 
 #[derive(Default, States, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ServerState {

@@ -7,7 +7,6 @@ use bevy::prelude::*;
 use bevy_asset_loader::loading_state::LoadingState;
 use bevy_asset_loader::loading_state::LoadingStateAppExt;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use common::input::PlayerInput;
 use common::loaders::KdlAsset;
 use common::loaders::KdlLoader;
 

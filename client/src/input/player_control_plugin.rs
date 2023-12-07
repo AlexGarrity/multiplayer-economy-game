@@ -1,5 +1,3 @@
-use bevy::utils::default;
-
 use bevy::{
     app::{Plugin, Update},
     ecs::{
@@ -8,8 +6,8 @@ use bevy::{
     },
     input::{keyboard::KeyCode, Input},
 };
-use bevy_renet::renet::{DefaultChannel, RenetClient};
-use common::{input::PlayerInput, network::NetworkMessages};
+
+use common::network::events::PlayerInput;
 
 use crate::GameState;
 

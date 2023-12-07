@@ -11,5 +11,5 @@ pub struct ClientMapping {
 
 #[derive(Resource, Default)]
 pub struct ClientEntityMapper {
-    pub clients: HashMap<ClientId, Entity>,
+    pub clients: HashMap<u64, Entity>,
 }

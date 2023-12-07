@@ -1,17 +1,12 @@
 use std::{net::UdpSocket, time::SystemTime};
 
 use bevy::{
-    app::{Plugin, Update},
+    app::{Plugin, Update, App},
     ecs::{
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut},
+        schedule::{IntoSystemConfigs, common_conditions::{resource_exists, in_state}},
+        system::ResMut, event::{EventReader, EventWriter},
     },
-    log::{info, warn},
-    math::Vec2,
-    render::color::Color,
-    sprite::{Sprite, SpriteBundle},
-    transform::components::Transform,
-    utils::default,
+    log::warn,
 };
 use bevy_renet::{
     client_connected,
@@ -22,18 +17,72 @@ use bevy_renet::{
     transport::NetcodeClientPlugin,
     RenetClientPlugin,
 };
-use common::{
-    input::PlayerInput,
+use common::
     network::{
-        configuration::{CLIENT_SOCKET_ADDRESS, PROTOCOL_ID, SERVER_SOCKET_ADDRESS},
-        EntityMapper, NetworkMessages, Position,
-    },
-};
+        configuration::{CLIENT_SOCKET_ADDRESS, PROTOCOL_ID, SERVER_SOCKET_ADDRESS}, events::{PlayerInput, EntityPosition}}
+    
+;
+use serde::{Serialize, Deserialize};
+
+use crate::GameState;
+
+use super::{event_types::{ReceiveFromServer, SendToServer}, entity_mapper::EntityMapper};
+
+enum NetworkEventDirection {
+    Send,
+    Receive,
+    Both,
+}
+
+trait NetworkEventAdder {
+    fn register_network_event<T>(&mut self, direction: NetworkEventDirection) -> &mut Self
+    where
+        T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static;
+}
+
+impl NetworkEventAdder for App {
+    fn register_network_event<T>(&mut self, direction: NetworkEventDirection) -> &mut Self
+    where
+        T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static,
+    {
+        match direction {
+            NetworkEventDirection::Send => {
+                self.add_event::<SendToServer<T>>();
+                self.add_systems(
+                    Update,
+                    (send_messages::<T>)
+                        .run_if(resource_exists::<RenetClient>())
+                        .run_if(in_state(GameState::Gameplay)),
+                );
+            }
+            NetworkEventDirection::Receive => {
+                self.add_event::<ReceiveFromServer<T>>();
+                self.add_systems(
+                    Update,
+                    (receive_messages::<T>)
+                        .run_if(resource_exists::<RenetClient>())
+                        .run_if(in_state(GameState::Gameplay)),
+                );
+            }
+            NetworkEventDirection::Both => {
+                self.add_event::<SendToServer<T>>();
+                self.add_event::<ReceiveFromServer<T>>();
+                self.add_systems(
+                    Update,
+                    (send_messages::<T>, receive_messages::<T>)
+                        .run_if(resource_exists::<RenetClient>())
+                        .run_if(in_state(GameState::Gameplay)),
+                );
+            }
+        };
+        self
+    }
+}
 
 pub struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
+    fn build(&self, app: &mut App) {
         let socket = UdpSocket::bind(CLIENT_SOCKET_ADDRESS).unwrap();
         let current_time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -49,86 +98,47 @@ impl Plugin for NetworkPlugin {
         let transport = NetcodeClientTransport::new(current_time, auth, socket).unwrap();
         let client = RenetClient::new(ConnectionConfig::default());
 
-        app.add_plugins(RenetClientPlugin);
-        app.add_plugins(NetcodeClientPlugin);
+        app.add_plugins((RenetClientPlugin, NetcodeClientPlugin));
         app.insert_resource(client);
         app.insert_resource(transport);
         app.init_resource::<EntityMapper>();
 
-        app.add_systems(
-            Update,
-            (send_messages, receive_messages).run_if(client_connected()),
-        );
+        app
+            .register_network_event::<PlayerInput>(NetworkEventDirection::Send)
+            .register_network_event::<EntityPosition>(NetworkEventDirection::Receive);
     }
 }
 
-fn send_messages(mut client: ResMut<RenetClient>, input: Res<PlayerInput>) {
-    let input_message = NetworkMessages::PlayerInput(*input);
-    let message = bincode::serialize(&input_message).unwrap();
-    client.send_message(DefaultChannel::ReliableOrdered, message);
+fn send_messages<T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
+    mut client: ResMut<RenetClient>,
+    mut reader: EventReader<SendToServer<T>>
+) {
+    reader.read().for_each(|event| {
+        let serialisation_result = bincode::serialize(&event.message);
+        match serialisation_result {
+            Ok (serialised_message) => {
+                client.send_message(DefaultChannel::ReliableOrdered, serialised_message);
+            },
+            Err (serialisation_error) => {
+                warn!("Tried to serialise a message but failed ({})", serialisation_error);
+            }
+        }
+    })
 }
 
-fn receive_messages(
+fn receive_messages<T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
     mut client: ResMut<RenetClient>,
-    mut mapper: ResMut<EntityMapper>,
-    mut positions: Query<(&mut Transform, &mut PlayerInput)>,
-    mut commands: Commands,
+    mut writer: EventWriter<ReceiveFromServer<T>>
 ) {
     while let Some(message) = client.receive_message(DefaultChannel::ReliableOrdered) {
-        let deserialised_message = bincode::deserialize(&message);
-        if deserialised_message.is_err() {
-            warn!("Got a bad message: {:?}", message);
-            continue;
-        }
-
-        let network_message: NetworkMessages = deserialised_message.unwrap();
-
-        match network_message {
-            NetworkMessages::Position(pos) => {
-                handle_position_message(&mut mapper, &mut commands, pos, &mut positions);
-            }
-            _ => {
-                todo!()
+        let deserialisation_result = bincode::deserialize::<T>(&message);
+        match deserialisation_result {
+            Ok(deserialised_message) => {
+                writer.send(ReceiveFromServer { message: deserialised_message });
+            },
+            Err(deserialisation_error) => {
+                warn!("Failed to deserialise a message from the server ({})", deserialisation_error);
             }
         }
-    }
-}
-
-fn handle_position_message(
-    mapper: &mut ResMut<EntityMapper>,
-    commands: &mut Commands,
-    pos: Position,
-    positions: &mut Query<(&mut Transform, &mut PlayerInput)>,
-) {
-    let entity = {
-        match mapper.entities.get(&pos.client) {
-            Some(e) => *e,
-            None => {
-                let entity = commands
-                    .spawn((
-                        SpriteBundle {
-                            sprite: Sprite {
-                                color: Color::hsl(60.0, 0.5, 0.5),
-                                custom_size: Some(Vec2::new(50.0, 50.0)),
-                                ..Default::default()
-                            },
-                            transform: Transform::IDENTITY,
-                            ..default()
-                        },
-                        PlayerInput::default(),
-                    ))
-                    .id();
-                mapper.entities.insert(pos.client, entity);
-                entity
-            }
-        }
-    };
-
-    let position = positions.get_mut(entity);
-    if let Ok((mut transform, mut input)) = position {
-        info!("{:?}", transform.as_ref());
-        transform.translation.x = pos.pos[0];
-        transform.translation.y = pos.pos[1];
-        transform.translation.z = pos.pos[2];
     }
 }
