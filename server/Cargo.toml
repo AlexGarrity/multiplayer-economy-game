@@ -6,8 +6,11 @@ edition = "2021"
 [dependencies]
 bevy_asset_loader = "0.18.0"
 bevy_renet = "0.0.10"
-bincode = "1.3.3"
-serde = "1.0.192"
+serde = "1.0.193"
+
+[dependencies.bincode]
+version = "2.0.0-rc.3"
+features = ["serde"]
 
 [dependencies.bevy]
 version = "0.12.0"

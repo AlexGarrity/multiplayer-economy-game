@@ -1,5 +1,4 @@
 use bevy::ecs::event::Event;
-use bevy_renet::renet::ClientId;
 use serde::{Serialize, Deserialize};
 
 #[derive(Event)]

@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, net::UdpSocket, time::SystemTime};
+use std::{fmt::Display, net::UdpSocket, time::SystemTime};
 
 use bevy::{
     app::{App, FixedUpdate, Plugin, Update},
@@ -10,7 +10,7 @@ use bevy::{
         },
         system::{Commands, ResMut},
     },
-    log::{info, warn},
+    log::{debug, info, warn},
     transform::components::Transform,
 };
 
@@ -25,7 +25,10 @@ use bevy_renet::{
 
 use common::network::{
     configuration::{PROTOCOL_ID, SERVER_SOCKET_ADDRESS},
-    events::{EntityPosition, PlayerInput},
+    events::{
+        CreateEntity, DestroyEntity, EntityPosition, GetPlayerEntity, GetWorldState, PlayerEntity,
+        PlayerInput,
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -44,13 +47,13 @@ enum NetworkEventDirection {
 trait NetworkEventAdder {
     fn register_network_event<T>(&mut self, direction: NetworkEventDirection) -> &mut Self
     where
-        T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static;
+        T: Display + Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static;
 }
 
 impl NetworkEventAdder for App {
     fn register_network_event<T>(&mut self, direction: NetworkEventDirection) -> &mut Self
     where
-        T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static,
+        T: Display + Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static,
     {
         match direction {
             NetworkEventDirection::Send => {
@@ -110,9 +113,13 @@ impl Plugin for NetworkPlugin {
         app.insert_resource(transport);
         app.init_resource::<ClientEntityMapper>();
 
-        app
-            .register_network_event::<PlayerInput>(NetworkEventDirection::Receive)
-            .register_network_event::<EntityPosition>(NetworkEventDirection::Send);
+        app.register_network_event::<PlayerInput>(NetworkEventDirection::Receive)
+            .register_network_event::<EntityPosition>(NetworkEventDirection::Send)
+            .register_network_event::<CreateEntity>(NetworkEventDirection::Send)
+            .register_network_event::<DestroyEntity>(NetworkEventDirection::Send)
+            .register_network_event::<GetWorldState>(NetworkEventDirection::Receive)
+            .register_network_event::<GetPlayerEntity>(NetworkEventDirection::Receive)
+            .register_network_event::<PlayerEntity>(NetworkEventDirection::Send);
 
         app.add_systems(
             FixedUpdate,
@@ -123,15 +130,16 @@ impl Plugin for NetworkPlugin {
     }
 }
 
-fn send_messages<T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
+fn send_messages<T: Display + Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
     mut server: ResMut<RenetServer>,
     mut reader: EventReader<SendToClient<T>>,
 ) {
     reader.read().for_each(|event| {
-        let serialisation_result = bincode::serialize(&event.message);
+        let serialisation_result = bincode::serde::encode_to_vec(&event.message, bincode::config::standard());
         match serialisation_result {
             Ok(serialised_message) => match event.client {
                 Some(receiver) => {
+                    debug!("Sent a message to {}, ({})", receiver.raw(), event.message);
                     server.send_message(
                         receiver,
                         DefaultChannel::ReliableOrdered,
@@ -139,6 +147,7 @@ fn send_messages<T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>
                     );
                 }
                 None => {
+                    debug!("Broadcast a message ({})", event.message);
                     server.broadcast_message(DefaultChannel::ReliableOrdered, serialised_message);
                 }
             },
@@ -152,15 +161,22 @@ fn send_messages<T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>
     })
 }
 
-fn receive_messages<T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
+fn receive_messages<T: Display + Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
     mut server: ResMut<RenetServer>,
     mut writer: EventWriter<ReceiveFromClient<T>>,
 ) {
     for client in server.clients_id() {
         while let Some(message) = server.receive_message(client, DefaultChannel::ReliableOrdered) {
-            let deserialisation_result = bincode::deserialize::<T>(&message);
+            let type_name = std::any::type_name::<T>();
+            if !message.starts_with(type_name.as_bytes()) {
+                warn!("Got a message that may be of type {} but doesn't fit the type", type_name);
+                continue;
+            }
+
+            let deserialisation_result = bincode::serde::decode_from_slice(&message, bincode::config::standard());
             match deserialisation_result {
-                Ok(message) => {
+                Ok((message, _)) => {
+                    debug!("Received a message from {}, ({})", client, message);
                     writer.send(ReceiveFromClient { client, message });
                 }
                 Err(deserialisation_error) => {
@@ -178,6 +194,8 @@ fn handle_events(
     mut server_events: EventReader<ServerEvent>,
     mut mapper: ResMut<ClientEntityMapper>,
     mut commands: Commands,
+    mut create_event_writer: EventWriter<SendToClient<CreateEntity>>,
+    mut destroy_event_writer: EventWriter<SendToClient<DestroyEntity>>,
 ) {
     for event in server_events.read() {
         match event {
@@ -185,9 +203,17 @@ fn handle_events(
                 info!("Client connected: {}", client);
 
                 let entity = commands
-                    .spawn((ClientMapping { id: *client }, Transform::IDENTITY))
+                    .spawn((
+                        ClientMapping { id: *client },
+                        Transform::IDENTITY,
+                        PlayerInput::default(),
+                    ))
                     .id();
                 mapper.clients.insert(client.raw(), entity);
+                create_event_writer.send(SendToClient {
+                    client: None,
+                    message: CreateEntity { entity },
+                });
             }
             ServerEvent::ClientDisconnected {
                 client_id: client,
@@ -197,6 +223,12 @@ fn handle_events(
                 match mapper.clients.get(&client.raw()) {
                     Some(entity) => {
                         commands.entity(*entity).despawn();
+                        destroy_event_writer.send(SendToClient {
+                            client: None,
+                            message: DestroyEntity {
+                                entity: entity.clone(),
+                            },
+                        });
                         mapper.clients.remove(&client.raw());
                     }
                     None => {

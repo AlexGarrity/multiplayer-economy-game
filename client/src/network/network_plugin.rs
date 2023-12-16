@@ -1,32 +1,40 @@
-use std::{net::UdpSocket, time::SystemTime};
+use std::{net::UdpSocket, time::SystemTime, fmt::Display, any};
 
 use bevy::{
-    app::{Plugin, Update, App},
+    app::{App, Plugin, Update},
     ecs::{
-        schedule::{IntoSystemConfigs, common_conditions::{resource_exists, in_state}},
-        system::ResMut, event::{EventReader, EventWriter},
+        event::{EventReader, EventWriter},
+        schedule::{
+            common_conditions::{in_state, resource_exists},
+            IntoSystemConfigs,
+        },
+        system::ResMut,
     },
-    log::warn,
+    log::{warn, debug},
 };
 use bevy_renet::{
-    client_connected,
     renet::{
         transport::{ClientAuthentication, NetcodeClientTransport},
         ConnectionConfig, DefaultChannel, RenetClient,
     },
     transport::NetcodeClientPlugin,
-    RenetClientPlugin,
+    RenetClientPlugin, client_connected,
 };
-use common::
-    network::{
-        configuration::{CLIENT_SOCKET_ADDRESS, PROTOCOL_ID, SERVER_SOCKET_ADDRESS}, events::{PlayerInput, EntityPosition}}
-    
-;
-use serde::{Serialize, Deserialize};
+use common::network::{
+    configuration::{CLIENT_SOCKET_ADDRESS, PROTOCOL_ID, SERVER_SOCKET_ADDRESS},
+    events::{
+        CreateEntity, DestroyEntity, EntityPosition, GetPlayerEntity, GetWorldState, PlayerEntity,
+        PlayerInput,
+    },
+};
+use serde::{Deserialize, Serialize};
 
 use crate::GameState;
 
-use super::{event_types::{ReceiveFromServer, SendToServer}, entity_mapper::EntityMapper};
+use super::{
+    entity_mapper::EntityMapper,
+    event_types::{ReceiveFromServer, SendToServer},
+};
 
 enum NetworkEventDirection {
     Send,
@@ -37,13 +45,13 @@ enum NetworkEventDirection {
 trait NetworkEventAdder {
     fn register_network_event<T>(&mut self, direction: NetworkEventDirection) -> &mut Self
     where
-        T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static;
+        T: Display + Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static;
 }
 
 impl NetworkEventAdder for App {
     fn register_network_event<T>(&mut self, direction: NetworkEventDirection) -> &mut Self
     where
-        T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static,
+        T: Display + Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static
     {
         match direction {
             NetworkEventDirection::Send => {
@@ -51,7 +59,7 @@ impl NetworkEventAdder for App {
                 self.add_systems(
                     Update,
                     (send_messages::<T>)
-                        .run_if(resource_exists::<RenetClient>())
+                        .run_if(client_connected())
                         .run_if(in_state(GameState::Gameplay)),
                 );
             }
@@ -59,9 +67,7 @@ impl NetworkEventAdder for App {
                 self.add_event::<ReceiveFromServer<T>>();
                 self.add_systems(
                     Update,
-                    (receive_messages::<T>)
-                        .run_if(resource_exists::<RenetClient>())
-                        .run_if(in_state(GameState::Gameplay)),
+                    (receive_messages::<T>).run_if(client_connected()),
                 );
             }
             NetworkEventDirection::Both => {
@@ -70,8 +76,7 @@ impl NetworkEventAdder for App {
                 self.add_systems(
                     Update,
                     (send_messages::<T>, receive_messages::<T>)
-                        .run_if(resource_exists::<RenetClient>())
-                        .run_if(in_state(GameState::Gameplay)),
+                        .run_if(client_connected()),
                 );
             }
         };
@@ -103,41 +108,55 @@ impl Plugin for NetworkPlugin {
         app.insert_resource(transport);
         app.init_resource::<EntityMapper>();
 
-        app
-            .register_network_event::<PlayerInput>(NetworkEventDirection::Send)
-            .register_network_event::<EntityPosition>(NetworkEventDirection::Receive);
+        app.register_network_event::<PlayerInput>(NetworkEventDirection::Send)
+            .register_network_event::<EntityPosition>(NetworkEventDirection::Receive)
+            .register_network_event::<CreateEntity>(NetworkEventDirection::Receive)
+            .register_network_event::<DestroyEntity>(NetworkEventDirection::Receive)
+            .register_network_event::<GetWorldState>(NetworkEventDirection::Send)
+            .register_network_event::<GetPlayerEntity>(NetworkEventDirection::Send)
+            .register_network_event::<PlayerEntity>(NetworkEventDirection::Receive);
     }
 }
 
-fn send_messages<T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
+fn send_messages<T: Display + Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
     mut client: ResMut<RenetClient>,
-    mut reader: EventReader<SendToServer<T>>
+    mut reader: EventReader<SendToServer<T>>,
 ) {
-    reader.read().for_each(|event| {
-        let serialisation_result = bincode::serialize(&event.message);
+    reader.read().for_each(move |event| {       
+        let serialisation_result = bincode::serde::encode_to_vec(&event.message, bincode::config::standard());
         match serialisation_result {
-            Ok (serialised_message) => {
+            Ok(serialised_message) => {
+                debug!("Sent a message ({}) (encoded as {:#?})", event.message, serialised_message);
                 client.send_message(DefaultChannel::ReliableOrdered, serialised_message);
-            },
-            Err (serialisation_error) => {
-                warn!("Tried to serialise a message but failed ({})", serialisation_error);
+            }
+            Err(serialisation_error) => {
+                warn!(
+                    "Tried to serialise a message but failed ({})",
+                    serialisation_error
+                );
             }
         }
     })
 }
 
-fn receive_messages<T: Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
+fn receive_messages<T: Display + Serialize + for<'a> Deserialize<'a> + Sync + Send + 'static>(
     mut client: ResMut<RenetClient>,
-    mut writer: EventWriter<ReceiveFromServer<T>>
+    mut writer: EventWriter<ReceiveFromServer<T>>,
 ) {
     while let Some(message) = client.receive_message(DefaultChannel::ReliableOrdered) {
-        let deserialisation_result = bincode::deserialize::<T>(&message);
+        let deserialisation_result = bincode::serde::decode_from_slice(&message, bincode::config::standard());
         match deserialisation_result {
-            Ok(deserialised_message) => {
-                writer.send(ReceiveFromServer { message: deserialised_message });
-            },
+            Ok((deserialised_message, _)) => {
+                debug!("Received a message ({})", deserialised_message);
+                writer.send(ReceiveFromServer {
+                    message: deserialised_message,
+                });
+            }
             Err(deserialisation_error) => {
-                warn!("Failed to deserialise a message from the server ({})", deserialisation_error);
+                warn!(
+                    "Failed to deserialise a message from the server ({})",
+                    deserialisation_error
+                );
             }
         }
     }

@@ -4,7 +4,7 @@ use bevy::{
         schedule::{common_conditions::in_state, IntoSystemConfigs},
         system::{Res, ResMut},
     },
-    input::{keyboard::KeyCode, Input},
+    input::{keyboard::KeyCode, Input}, prelude::default,
 };
 
 use common::network::events::PlayerInput;
@@ -24,8 +24,24 @@ impl Plugin for PlayerControlPlugin {
 }
 
 fn handle_player_input(keyboard: Res<Input<KeyCode>>, mut input: ResMut<PlayerInput>) {
-    input.left = keyboard.pressed(KeyCode::A) as u8;
-    input.right = keyboard.pressed(KeyCode::D) as u8;
-    input.forward = keyboard.pressed(KeyCode::W) as u8;
-    input.backward = keyboard.pressed(KeyCode::S) as u8;
+    let new_input = PlayerInput {
+        left: keyboard.pressed(KeyCode::A) as u8,
+        right: keyboard.pressed(KeyCode::D) as u8,
+        forward: keyboard.pressed(KeyCode::W) as u8,
+        backward: keyboard.pressed(KeyCode::S) as u8,
+        ..default()
+    };
+
+    if input.left != new_input.left {
+        input.left = new_input.left;
+    }
+    if input.right != new_input.right {
+        input.right = new_input.right;
+    }
+    if input.forward != new_input.forward {
+        input.forward = new_input.forward;
+    }
+    if input.backward != new_input.backward {
+        input.backward = new_input.backward;
+    }
 }
